@@ -21,25 +21,7 @@ class UpsampleBlock(nn.Module):
         return x
 
 
-# TODO
-# class UpsampleBlock(nn.Module):
-#     def __init__(self, in_channels:int, out_channels:int, stride:Literal[1,2]=2):
-#         super(UpsampleBlock, self).__init__()
-#         self.deconv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=4, stride=stride, padding=0, bias=False)
-#         self.stride = stride
-#         if self.stride == 2:
-#             self.conv = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-#         self.bn = nn.BatchNorm2d(out_channels)
-#         self.relu = nn.ReLU(inplace=True)
 
-#     def forward(self, x):
-#         x = self.deconv(x)
-#         if self.stride == 2:
-#             x = self.conv(x) # smooth the checkerboard
-#         x = self.bn(x)
-#         x = self.relu(x)
-#         return x
-    
 
 class AfNType(Enum):
     AfN1 = "AfN1" # Spatial, no upsampling
@@ -71,12 +53,12 @@ class EfficientResNetDecoder(nn.Module):
         super(EfficientResNetDecoder, self).__init__()
         self.encoder_dims = encoder_dims
         self.afn1 = AfnDecoderBlock(self.encoder_dims[2],64,AfNType.AfN1)
-        self.afn2 = AfnDecoderBlock(self.encoder_dims[-1],128,AfNType.AfN2)
-        self.conv1 = nn.Conv2d(128+64+self.encoder_dims[2], 128, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1 = nn.BatchNorm2d(128)
+        self.afn2 = AfnDecoderBlock(self.encoder_dims[-1],32, AfNType.AfN2)
+        self.conv1 = nn.Conv2d(64+32+self.encoder_dims[2], 64, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
         self.relu1 = nn.ReLU(inplace=True)
-        self.upsample1 = UpsampleBlock(128, 64, stride=2)
-        self.upsample2 = UpsampleBlock(64+self.encoder_dims[0], 32, stride=2)
+        self.upsample1 = UpsampleBlock(64, 32, stride=2)
+        self.upsample2 = UpsampleBlock(32+self.encoder_dims[0], 32, stride=2)
         self.conv2 = nn.Conv2d(32, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
 
     def forward(self, skip_connections, x):
