@@ -67,23 +67,26 @@ class AfnDecoderBlock(nn.Module):
 
 
 class EfficientResNetDecoder(nn.Module):
-    def __init__(self, n_classes:int, encoder_dims:List[int]=[64, 64, 128, 256, 512]):
+    def __init__(self, n_classes:int, encoder_dims:List[int]=[64, 64, 64, 128, 256, 512]):
         super(EfficientResNetDecoder, self).__init__()
         self.encoder_dims = encoder_dims
-        self.afn1 = AfnDecoderBlock(64,64,AfNType.AfN1)
-        self.afn2 = AfnDecoderBlock(512,128,AfNType.AfN2)
-        self.conv1 = nn.Conv2d(256, 128, kernel_size=1, stride=1, padding=0, bias=False)
+        self.afn1 = AfnDecoderBlock(self.encoder_dims[2],64,AfNType.AfN1)
+        self.afn2 = AfnDecoderBlock(self.encoder_dims[-1],128,AfNType.AfN2)
+        self.conv1 = nn.Conv2d(128+64+self.encoder_dims[2], 128, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1 = nn.BatchNorm2d(128)
+        self.relu1 = nn.ReLU(inplace=True)
         self.upsample1 = UpsampleBlock(128, 64, stride=2)
-        self.upsample2 = UpsampleBlock(128, 32, stride=2)
+        self.upsample2 = UpsampleBlock(64+self.encoder_dims[0], 32, stride=2)
         self.conv2 = nn.Conv2d(32, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
 
     def forward(self, skip_connections, x):
         skip1, _, skip2, _, _, _, skip3 = skip_connections
-        print(skip1.shape)
         afn1 = self.afn1(skip2)
         afn2 = self.afn2(skip3)
         x = torch.cat([skip2, afn1, afn2], dim=1)
         x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
         x = self.upsample1(x)
         x = torch.cat([skip1,x], dim=1)
         x = self.upsample2(x)
@@ -92,6 +95,8 @@ class EfficientResNetDecoder(nn.Module):
 
 
 if __name__ == '__main__':
+    import time
+    
     block1 = AfnDecoderBlock(64,128,AfNType.AfN1)
     block2 = AfnDecoderBlock(64,128,AfNType.AfN2)
     input = torch.randn((1,64,64,48))
@@ -101,11 +106,18 @@ if __name__ == '__main__':
     assert output2.shape == (1, 128, 256, 192)
 
     n_classes=2
+    device = torch.device('cuda')
 
-    encoder = EfficientResNetEncoder()
-    decoder = EfficientResNetDecoder(n_classes=n_classes)
-    input_tensor = torch.randn(1, 3, 1024, 768)  # Example input tensor
-   
+    encoder = EfficientResNetEncoder().to(device)
+    decoder = EfficientResNetDecoder(n_classes=n_classes).to(device)
+    input_tensor = torch.randn(1, 3, 1024, 768).to(device)  # Example input tensor
+    print(f'Device: {input_tensor.device}')
+    for _ in range(10): # warmup
+        skip_connections, x = encoder(input_tensor)
+        output = decoder(skip_connections, x)
+    start_ts = time.time()
     skip_connections, x = encoder(input_tensor)
     output = decoder(skip_connections, x)
+    print(f'Total time (ms): {1000*(time.time()-start_ts):.4f}')
+
     assert output.shape == (1,n_classes,1024,768)
