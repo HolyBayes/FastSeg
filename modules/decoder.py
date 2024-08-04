@@ -57,9 +57,9 @@ class EfficientResNetDecoder(nn.Module):
         self.conv1 = nn.Conv2d(64+32+self.encoder_dims[2], 64, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu1 = nn.ReLU(inplace=True)
-        self.upsample1 = UpsampleBlock(64, 32, stride=2)
-        self.upsample2 = UpsampleBlock(32+self.encoder_dims[0], 32, stride=2)
-        self.conv2 = nn.Conv2d(32, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
+        self.upsample1 = UpsampleBlock(64, 64, stride=2)
+        self.upsample2 = UpsampleBlock(64+self.encoder_dims[0], 128, stride=2)
+        self.cls_head = nn.Linear(128, n_classes, bias=True)
 
     def forward(self, skip_connections, x):
         skip1, _, skip2, _, _, _, skip3 = skip_connections
@@ -72,7 +72,9 @@ class EfficientResNetDecoder(nn.Module):
         x = self.upsample1(x)
         x = torch.cat([skip1,x], dim=1)
         x = self.upsample2(x)
-        x = self.conv2(x)
+        x = x.permute(0,2,3,1)
+        x = self.cls_head(x)
+        x = x.permute(0,3,1,2)
         return x
 
 
@@ -103,3 +105,4 @@ if __name__ == '__main__':
     print(f'Total time (ms): {1000*(time.time()-start_ts):.4f}')
 
     assert output.shape == (1,n_classes,1024,768)
+    

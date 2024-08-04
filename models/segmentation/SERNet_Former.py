@@ -30,4 +30,5 @@ if __name__ == '__main__':
         output = model(input)
     start_ts = time.time()
     output = model(input)
-    print(f'SERNet inference time (ms): {(time.time()-start_ts)*1000:.4f}')
+    print(f'SERNet inference time (ms): {(time.time()-start_ts)*1000:.4f}') # 27 ms
+    torch.save(model, 'sernet.ckpt') # 35 Mb
