@@ -6,7 +6,7 @@ from enum import Enum
 from encoder import EfficientResNetEncoder
 
 class UpsampleBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=2):
+    def __init__(self, in_channels, out_channels, stride=2): # "stride" here is a scaling factor
         super(UpsampleBlock, self).__init__()
         self.upsample = nn.Upsample(scale_factor=stride, mode='bilinear', align_corners=True)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False)
