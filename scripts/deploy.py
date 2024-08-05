@@ -1,5 +1,5 @@
 import sys; sys.path.append('../'); sys.path.append('../modules/'); sys.path.append('../models/')
-from models.segmentation.SERNet_Former import SERNet_Former
+from models.SERNet_Former import SERNet_Former
 import torch
 import torch.onnx
 from onnx import ModelProto
@@ -68,6 +68,21 @@ if __name__ == '__main__':
 
 
     # # ONNX -> TensorRT
+
+    import mmcv
+    from mmcv.tensorrt import onnx2tensorrt
+
+    # Define the path for the TensorRT engine file
+    trt_file_path = "sernet_model.trt"
+
+    # Convert ONNX to TensorRT
+    onnx2tensorrt(
+        onnx_path,
+        trt_file_path,
+        input_shapes={'input': [1, 3, 1024, 768]},  # Adjust input shapes if necessary
+        max_workspace_size=1 << 30,  # 1 GB
+        fp16_mode=False  # Set to True if you want to use FP16 precision
+    )
 
     # Met some hardware issues
 
