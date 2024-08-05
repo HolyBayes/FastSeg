@@ -28,7 +28,7 @@ class CustomTrainer(Trainer):
         mask = inputs["mask"].contiguous().view(-1).float()
         outputs = model(image)
         logits = outputs.contiguous().view(-1)
-        ce_loss = F.cross_entropy(logits, mask)
+        ce_loss = F.binary_cross_entropy_with_logits(logits, mask)
         dice_loss_ = dice_loss(logits, mask)
         loss = self.ce_fraction*ce_loss+self.dice_fraction*dice_loss_
         return (loss, outputs) if return_outputs else loss
@@ -76,7 +76,7 @@ class CustomTrainer(Trainer):
 if __name__ == '__main__':
 
     # Initialize model configuration and model
-    config = SERNetConfig(num_labels=1)
+    config = SERNetConfig(num_labels=1, id2label = {"0": "background", "1": "person"}, label2id={"background": 0, "person": 1})
     model = SERNet_Former(config)
     model.apply(init_weights)
 
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         evaluation_strategy="steps",
         save_steps=500,
         eval_steps=500,
-        # report_to="none",
+        report_to="none",
         logging_dir='../logs',
         logging_steps=100,
         load_best_model_at_end=True,
@@ -125,4 +125,5 @@ if __name__ == '__main__':
 
 
     # Start training
+    # trainer.train()
     trainer.train(resume_from_checkpoint=True)
