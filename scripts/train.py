@@ -38,14 +38,6 @@ class CustomTrainer(Trainer):
             self.optimizer = Adan(self.model.parameters(), weight_decay = 0.02)
         return self.optimizer
     
-    def compute_metrics(self, p):
-        logits = p.predictions
-        labels = p.label_ids
-        
-        iou = compute_iou(logits, labels)
-        return {"iou": iou}
-
-
 
     def evaluate(self, eval_dataset=None, ignore_keys=None, metric_key_prefix: str = "eval", n_iters: int | None = 100):
         eval_dataloader = self.get_eval_dataloader(eval_dataset)
@@ -112,7 +104,7 @@ if __name__ == '__main__':
         evaluation_strategy="steps",
         save_steps=500,
         eval_steps=500,
-        report_to="none",
+        # report_to="none",
         logging_dir='../logs',
         logging_steps=100,
         load_best_model_at_end=True,
@@ -133,4 +125,4 @@ if __name__ == '__main__':
 
 
     # Start training
-    trainer.train()
+    trainer.train(resume_from_checkpoint=True)
