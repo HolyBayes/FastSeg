@@ -1,0 +1,7 @@
+data/easyportrait
+__pycache__/
+logs/
+results/
+checkpoints/
+wandb/
+data/easyportrait/
