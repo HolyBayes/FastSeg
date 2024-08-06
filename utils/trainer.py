@@ -39,7 +39,7 @@ class SemanticSegmentationTrainer(Trainer):
         return self.optimizer
     
 
-    def evaluate(self, eval_dataset=None, metric_key_prefix: str = "eval", n_iters: int | None = 100):
+    def evaluate(self, eval_dataset=None, ignore_keys=False, metric_key_prefix: str = "eval", n_iters: int | None = 100):
         eval_dataloader = self.get_eval_dataloader(eval_dataset)
         self.model.eval()
         # Initialize containers to hold logits and labels
