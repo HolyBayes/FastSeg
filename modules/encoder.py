@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
-from abg import AttentionBoostingGate
-from dbn import DilationBasedNetwork
+import sys; sys.path.append('../')
+from modules.abg import AttentionBoostingGate
+from modules.dbn import DilationBasedNetwork
 
 
 class ConvBlock(nn.Module):

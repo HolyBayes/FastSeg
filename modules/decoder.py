@@ -1,9 +1,10 @@
 import torch
 from torch import nn
 from typing import Literal, List, Optional
-from afn import ContextAFN, SpatialAFN
+import sys; sys.path.append('../')
+from modules.afn import ContextAFN, SpatialAFN
 from enum import Enum
-from encoder import EfficientResNetEncoder
+from modules.encoder import EfficientResNetEncoder
 
 class UpsampleBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=2): # "stride" here is a scaling factor

@@ -2,7 +2,7 @@ from transformers import FeatureExtractionMixin, pipeline
 import numpy as np
 from PIL import Image
 import torch
-from models.SERNet_Former import SERNet_Former, SERNetConfig
+from models.SERSegFormer.model import SERNet_Former, SERNetConfig
 
 class SERNetFeatureExtractor(FeatureExtractionMixin):
     def __init__(self, size=(1024,768)):

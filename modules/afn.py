@@ -1,6 +1,7 @@
 import torch
 from torch import nn
-from abg import AttentionBoostingGate
+import sys; sys.path.append('../../')
+from modules.abg import AttentionBoostingGate
 
     
 class ContextAFN(nn.Module): # AfN2, S:4

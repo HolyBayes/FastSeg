@@ -1,6 +1,7 @@
 from transformers import TrainingArguments
 import sys; sys.path.append('../')
-from models.SegFormer import SegformerForSemanticSegmentation, SegformerConfig
+from models.SegFormer.model import SegformerForSemanticSegmentation
+from models.SegFormer.config import SegformerConfig
 
 from data.dataset import *
 from data.transforms import get_training_augmentation, get_val_test_augmentation
@@ -12,12 +13,16 @@ from utils.trainer import SemanticSegmentationTrainer
 # Training script
 if __name__ == '__main__':
 
-    config = SegformerConfig(num_labels=1)
+    config = SegformerConfig(num_labels=1, image_size=512)
     # Initialize model configuration and model
     model = SegformerForSemanticSegmentation(config) # 12 ms inference time
     state_dict = torch.load('../checkpoints/segformer_b0_cityscapes.pth')
     state_dict.pop('decode_head.classifier.weight'); state_dict.pop('decode_head.classifier.bias')
     model.load_state_dict(state_dict, strict=False)
+
+    n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f'Number of parameters: {n_params}')
+    # Inference 24ms
     
     
     # Load dataset
@@ -65,6 +70,8 @@ if __name__ == '__main__':
     )
 
 
+
     # Start training
-    trainer.train()
-    # trainer.train(resume_from_checkpoint=True)
+    # trainer.train()
+    trainer.train(resume_from_checkpoint=True)
+    
