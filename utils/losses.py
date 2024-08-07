@@ -1,6 +1,8 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
+from crfseg import CRF
+
 
 def dice_loss_multiclass(predict, target, weight=None, smooth=1e-5):
     N, C = predict.size()[:2]
@@ -44,6 +46,13 @@ def dice_loss_binary(predict, target, weight=None, smooth=1e-5):
     
     return dice_loss
 
+crf = nn.Sequential(
+        nn.Identity(),  # your NN
+        CRF(n_spatial_dims=2)
+    )
+
+def crf_loss(predict):
+    return (crf(predict) - predict).mean()
 
 
 # class DiceLoss(nn.Module):
