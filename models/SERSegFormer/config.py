@@ -25,7 +25,7 @@ class SersegformerConfig(PretrainedConfig):
         drop_path_rate=0.1,
         layer_norm_eps=1e-6,
         decoder_hidden_size=256, # channels compression
-        deconv=False,
+        upsample=False,
         reshape_last_stage=True,
         abg=False, # Attention-boosting gate from https://arxiv.org/pdf/2401.15741
         dbn=False, # Dilation-based convolition network from https://arxiv.org/pdf/2401.15741
@@ -58,5 +58,5 @@ class SersegformerConfig(PretrainedConfig):
         self.abg = abg
         self.dbn = dbn
         self.critic = critic
-        self.deconv = deconv
+        self.upsample = upsample
         self.afn = afn

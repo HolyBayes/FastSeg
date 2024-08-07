@@ -7,6 +7,7 @@ from data.dataset import *
 from data.transforms import get_training_augmentation, get_val_test_augmentation
 
 from utils.trainer import SemanticSegmentationTrainer
+from utils.initialization import init_weights
 
 
 
@@ -20,12 +21,17 @@ if __name__ == '__main__':
                           upsample=True)
     # Initialize model configuration and model
     model = SersegformerForSemanticSegmentation(config) # 25 ms inference time
+    model.apply(init_weights)
     
     from safetensors.torch import load_file
     state_dict = load_file('../checkpoints/segformer-b0/model.safetensors') # finetune Segformer-b0
     state_dict.pop('decode_head.classifier.weight'); state_dict.pop('decode_head.classifier.bias')
-    model.load_state_dict(state_dict, strict=False)
     
+    # rename_fields "segformer' -> "sersegformer"
+    state_dict = {k.replace('segformer', 'sersegformer'):v for k,v in state_dict.items()}
+
+    model.load_state_dict(state_dict, strict=False)
+
     
     # Load dataset
     train_dataset = EasyPortraitDataset(
@@ -61,17 +67,12 @@ if __name__ == '__main__':
         save_total_limit=1  # Keep only the best model
     )
 
-    from adan_pytorch import Adan
-
-    class DecoderFinetuneTrainer(SemanticSegmentationTrainer):
-        def create_optimizer(self):
-            if self.optimizer is None:
-                self.optimizer = Adan(self.model.decode_head.parameters(), weight_decay = 0.02)
-            return self.optimizer
+    from itertools import chain
 
     # Initialize custom trainer with callbacks and custom metric
-    trainer = DecoderFinetuneTrainer(
+    trainer = SemanticSegmentationTrainer(
         model=model,
+        params=chain(model.decode_head.upsample.parameters(),model.decode_head.classifier.parameters()),
         label_names=['person'],
         args=training_args,
         train_dataset=train_dataset,

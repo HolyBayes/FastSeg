@@ -9,11 +9,12 @@ import numpy as np
 
 
 class SemanticSegmentationTrainer(Trainer):
-    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, label_names=['person'], *args, **kwargs):
+    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, label_names=['person'], params=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dice_fraction = dice_fraction
         self.ce_fraction = ce_fraction
         self.label_names = label_names
+        self.params = params
 
         # self.add_callback(EarlyStoppingCallback(early_stopping_patience=3))
         # self.add_callback(TensorBoardCallback())
@@ -34,8 +35,12 @@ class SemanticSegmentationTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
     def create_optimizer(self):
+        if self.params is None:
+            params = self.model.parameters()
+        else:
+            params = self.params
         if self.optimizer is None:
-            self.optimizer = Adan(self.model.parameters(), weight_decay = 0.02)
+            self.optimizer = Adan(params, weight_decay = 0.02)
         return self.optimizer
     
 

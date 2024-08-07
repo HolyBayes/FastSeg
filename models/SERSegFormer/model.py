@@ -580,9 +580,20 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
         super().__init__(config)
         # linear layers which will unify the channel dimension of each of the encoder blocks to the same config.decoder_hidden_size
         mlps = []
-        for i in range(config.num_encoder_blocks):
-            mlp = SersegformerMLP(config, input_dim=config.hidden_sizes[i])
+        hidden_dims = [x for x in config.hidden_sizes]
+        if config.dbn:
+            hidden_dims[0] *= 2
+            hidden_dims[1] *= 2
+        if config.afn:
+            hidden_dims[0] *= 2
+            hidden_dims[1] *= 2
+            hidden_dims[2] = 2*hidden_dims[2]+hidden_dims[0]
+            hidden_dims[3] = 2*hidden_dims[3]+hidden_dims[1]
+            
+        for hidden_dim in hidden_dims:
+            mlp = SersegformerMLP(config, input_dim=hidden_dim)
             mlps.append(mlp)
+        
         self.linear_c = nn.ModuleList(mlps)
 
         # the following 3 layers implement the ConvModule of the original implementation
@@ -600,32 +611,48 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
         
 
         if self.config.upsample:
-            self.upsample = nn.Sequential(
-                UpsampleBlock(config.decoder_hidden_size, config.decoder_hidden_size//4),
-                nn.PReLU(),
-                nn.BatchNorm2d(config.decoder_hidden_size//4),
-                UpsampleBlock(config.decoder_hidden_size//4, config.decoder_hidden_size//4),
-                nn.PReLU(),
-                nn.BatchNorm2d(config.decoder_hidden_size//4)
-            )
+            self.upsample1 = UpsampleBlock(config.decoder_hidden_size, config.decoder_hidden_size//4)
+            self.upsample2 = UpsampleBlock(config.decoder_hidden_size//4, config.decoder_hidden_size//4)
             self.classifier = nn.Linear(config.decoder_hidden_size//4, config.num_labels)
         else:
             self.classifier = nn.Linear(config.decoder_hidden_size, config.num_labels)
 
-        if self.config.dbn: # Applied after
-            self.dbn = DilationBasedNetwork(config.decoder_hidden_size * config.num_encoder_blocks)
+        
+        if self.config.dbn: # Applied to the first hidden state (which is spatial)
+            self.dbn1 = DilationBasedNetwork(config.hidden_sizes[0])
+            self.dbn2 = DilationBasedNetwork(config.hidden_sizes[1])
+
+        if self.config.afn:
+            self.afn11 = SpatialAFN(config.hidden_sizes[0] if not self.config.dbn else 2*config.hidden_sizes[0])
+            self.afn13 = ContextAFN(2*config.hidden_sizes[0] if not self.config.dbn else 4*config.hidden_sizes[0])
+            self.afn22 = SpatialAFN(config.hidden_sizes[1] if not self.config.dbn else 2*config.hidden_sizes[1])
+            self.afn24 = ContextAFN(2*config.hidden_sizes[1] if not self.config.dbn else 4*config.hidden_sizes[1])
+            self.afn33 = SpatialAFN(config.hidden_sizes[2])
+            self.afn44 = SpatialAFN(config.hidden_sizes[3])
+
+            if self.config.upsample:
+                self.afn_final = nn.Sequential(ContextAFN(config.decoder_hidden_size//4),
+                                               UpsampleBlock(config.decoder_hidden_size//4, config.decoder_hidden_size//4, stride=4))
 
 
     def forward(self, encoder_hidden_states):
         batch_size, _, _, _ = encoder_hidden_states[-1].shape
         all_hidden_states = ()
-
+        encoder_hidden_states = list(encoder_hidden_states)
         if self.config.dbn: # apply to encoder_hidden_states[0]
-            raise NotImplementedError
+            encoder_hidden_states[0] = torch.cat([self.dbn1(encoder_hidden_states[0]), encoder_hidden_states[0]], dim=1)
+            encoder_hidden_states[1] = torch.cat([self.dbn2(encoder_hidden_states[1]), encoder_hidden_states[1]], dim=1)
+
+            # [config.hidden_sizes[0], config.hidden_sizes[0]+config.hidden_sizes[1], config.hidden_sizes[0]+config.hidden_sizes[1]+config.hidden_sizes[2], config.hidden_sizes[3]]
         
         if self.config.afn:
             # Apply attention-fusion networks. SpatialAFN to encoder_hidden_states[0] and encoder_hidden_states[1], ContentAFN to encoder_hidden_states[2] and encoder_hidden_states[3]
-            raise NotADirectoryError
+            encoder_hidden_states[0] = torch.cat([self.afn11(encoder_hidden_states[0]), encoder_hidden_states[0]], dim=1)
+            encoder_hidden_states[1] = torch.cat([self.afn22(encoder_hidden_states[1]), encoder_hidden_states[1]], dim=1)
+            encoder_hidden_states[2] = torch.cat([self.afn13(encoder_hidden_states[0]), self.afn33(encoder_hidden_states[2]), encoder_hidden_states[2]], dim=1)
+            encoder_hidden_states[3] = torch.cat([self.afn24(encoder_hidden_states[1]), self.afn44(encoder_hidden_states[3]), encoder_hidden_states[3]], dim=1)
+            
+
 
         for encoder_hidden_state, mlp in zip(encoder_hidden_states, self.linear_c):
             # unify channel dimension
@@ -634,12 +661,10 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
             encoder_hidden_state = encoder_hidden_state.permute(0, 2, 1)
             encoder_hidden_state = encoder_hidden_state.reshape(batch_size, -1, height, width)
             # upsample
-            encoder_hidden_state = nn.functional.interpolate(
+            encoder_hidden_state = nn.functional.interpolate( # TODO make smarter upsampling
                 encoder_hidden_state, size=encoder_hidden_states[0].size()[2:], mode="bilinear", align_corners=False
             )
             all_hidden_states += (encoder_hidden_state,)
-
-
 
 
         hidden_states = self.linear_fuse(torch.cat(all_hidden_states[::-1], dim=1))
@@ -649,7 +674,11 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
 
         
         if self.config.upsample: # Upsample by 4
-            hidden_states = self.upsample(hidden_states)
+            hidden_states = self.upsample1(hidden_states)
+            if self.config.afn:
+                hidden_states += self.afn_final(hidden_states)
+            hidden_states = self.upsample2(hidden_states)
+
         # logits are of shape (batch_size, num_labels, height/4, width/4)
         # logits = self.classifier(hidden_states)
         logits = self.classifier(hidden_states.permute(0,2,3,1)).permute(0,3,1,2)
@@ -723,13 +752,14 @@ class SersegformerForSemanticSegmentation(SersegformerPreTrainedModel):
 if __name__ == '__main__':
     import time
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')
     config = SersegformerConfig(abg=True,
                                 num_labels=1,
-                                # decoder_hidden_size=128, # Channels compression
+                                # decoder_hidden_size=128, # Channels compression (-4ms)
                                 upsample=True,
-                                # afn=True,
-                                # dbn=True
+                                afn=True,
+                                dbn=True # Cheap, no inference time increase
                                 )
     model = SersegformerForSemanticSegmentation(config).to(device)
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
