@@ -48,7 +48,7 @@ class SemanticSegmentationTrainer(Trainer):
         else:
             params = self.params
         if self.optimizer is None:
-            self.optimizer = Adan(params, weight_decay = 0.02)
+            self.optimizer = Adan(params, lr=1e-3, weight_decay = 0.02)
         return self.optimizer
     
 

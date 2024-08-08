@@ -1,8 +1,7 @@
-import sys; sys.path.append('../')
-import sys; sys.path.append('../modules/')
+import sys; sys.path.append('../'); sys.path.append('../modules/')
 
-from modules.encoder import EfficientResNetEncoder
-from modules.decoder import EfficientResNetDecoder
+from models.SERNet_Former.encoder import EfficientResNetEncoder
+from models.SERNet_Former.decoder import EfficientResNetDecoder
 from torch import nn
 import torch
 from transformers import PretrainedConfig, PreTrainedModel

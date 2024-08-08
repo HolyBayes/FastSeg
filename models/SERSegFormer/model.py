@@ -20,8 +20,10 @@ from models.SERSegFormer.config import SersegformerConfig
 from modules.abg import AttentionBoostingGate
 from modules.dbn import DilationBasedNetwork
 from modules.afn import ContextAFN, SpatialAFN
-from modules.decoder import AfnDecoderBlock
 from modules.upsample import UpsampleBlock
+from modules.dam import DAM
+
+
 # torch.autograd.set_detect_anomaly(True)
 
 # AbG layers
@@ -594,7 +596,9 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
             hidden_dims[1] *= 2
             hidden_dims[2] = 2*hidden_dims[2]+hidden_dims[0]
             hidden_dims[3] = 2*hidden_dims[3]+hidden_dims[1]
-            
+
+        self.hidden_dims = hidden_dims # hidden sizes after all concatenations
+        
         for hidden_dim in hidden_dims:
             mlp = SersegformerMLP(config, input_dim=hidden_dim)
             mlps.append(mlp)
@@ -622,6 +626,8 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
         else:
             self.classifier = nn.Linear(config.decoder_hidden_size, config.num_labels)
 
+        if self.config.dam:
+            self.dam = DAM(hidden_dims[0])
         
         if self.config.dbn: # Applied to the first hidden state (which is spatial)
             self.dbn1 = DilationBasedNetwork(config.hidden_sizes[0])
@@ -657,7 +663,8 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
             encoder_hidden_states[2] = torch.cat([self.afn13(encoder_hidden_states[0]), self.afn33(encoder_hidden_states[2]), encoder_hidden_states[2]], dim=1)
             encoder_hidden_states[3] = torch.cat([self.afn24(encoder_hidden_states[1]), self.afn44(encoder_hidden_states[3]), encoder_hidden_states[3]], dim=1)
             
-
+        if self.config.dam:
+            encoder_hidden_states[0] = self.dam(encoder_hidden_states[0])
 
         for encoder_hidden_state, mlp in zip(encoder_hidden_states, self.linear_c):
             # unify channel dimension
@@ -673,6 +680,7 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
 
 
         hidden_states = self.linear_fuse(torch.cat(all_hidden_states[::-1], dim=1))
+        
         hidden_states = self.batch_norm(hidden_states)
         hidden_states = self.activation(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -768,7 +776,8 @@ if __name__ == '__main__':
                                 upsample=True,
                                 afn=False,
                                 add_depth_channel=True,
-                                dbn=True # Cheap, no inference time increase
+                                dbn=True, # Cheap, no inference time increase,
+                                dam=True
                                 )
     model = SersegformerForSemanticSegmentation(config).to(device)
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)

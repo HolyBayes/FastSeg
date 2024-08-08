@@ -12,6 +12,8 @@ from data.transforms import get_training_augmentation, get_val_test_augmentation
 from utils.trainer import SemanticSegmentationTrainer
 from utils.initialization import init_weights
 
+from safetensors.torch import load_file
+
 
 USE_DEPTH = True
 
@@ -29,6 +31,9 @@ if __name__ == '__main__':
     # Initialize model configuration and model
     model = SersegformerForSemanticSegmentation(config) # 25 ms inference time
     model.apply(init_weights)
+    # state_dict = load_file('../checkpoints/serseg_abg_dbn_w_depth/checkpoint-24000/model.safetensors')
+    # model.load_state_dict(state_dict)
+    
 
     
     # Load dataset
@@ -52,18 +57,19 @@ if __name__ == '__main__':
     training_args = TrainingArguments(
         output_dir=f'../results/{model.__class__.__name__}',
         num_train_epochs=100,
-        per_device_train_batch_size=6,
-        per_device_eval_batch_size=6,
+        per_device_train_batch_size=12,
+        per_device_eval_batch_size=12,
         evaluation_strategy="steps",
         save_steps=500,
         eval_steps=500,
-        report_to="none", # Uncomment to diable WandB and Comet
+        #report_to="none", # Uncomment to diable WandB and Comet
         logging_dir=f'../logs/{model.__class__.__name__}',
         logging_steps=100,
         load_best_model_at_end=True,
         metric_for_best_model="eval_iou",  # Use mIoU for selecting the best model
         greater_is_better=True,
         remove_unused_columns=False,
+        dataloader_num_workers=32,
         save_total_limit=1  # Keep only the best model
     )
 

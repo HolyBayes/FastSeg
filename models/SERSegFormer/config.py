@@ -32,6 +32,7 @@ class SersegformerConfig(PretrainedConfig):
         afn=False, # Attention-fusion Networks
         critic=False, # Add critic loss
         add_depth_channel=False, # Add depth map channel
+        dam=False, # Dual Attention Mechanism from HSNet https://ieeexplore.ieee.org/document/10495017
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -62,3 +63,4 @@ class SersegformerConfig(PretrainedConfig):
         self.upsample = upsample
         self.afn = afn
         self.add_depth_channel = add_depth_channel
+        self.dam = dam
