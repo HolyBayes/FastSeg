@@ -586,6 +586,7 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         # linear layers which will unify the channel dimension of each of the encoder blocks to the same config.decoder_hidden_size
+        self.config = config
         mlps = []
         hidden_dims = [x for x in config.hidden_sizes]
         if config.dbn:
@@ -597,8 +598,10 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
             hidden_dims[2] = 2*hidden_dims[2]+hidden_dims[0]
             hidden_dims[3] = 2*hidden_dims[3]+hidden_dims[1]
 
-        self.hidden_dims = hidden_dims # hidden sizes after all concatenations
-        
+        if self.config.add_depth_channel:
+            for i in range(len(hidden_dims[:-1])):
+                hidden_dims[i] += 1
+
         for hidden_dim in hidden_dims:
             mlp = SersegformerMLP(config, input_dim=hidden_dim)
             mlps.append(mlp)
@@ -663,6 +666,10 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
             encoder_hidden_states[2] = torch.cat([self.afn13(encoder_hidden_states[0]), self.afn33(encoder_hidden_states[2]), encoder_hidden_states[2]], dim=1)
             encoder_hidden_states[3] = torch.cat([self.afn24(encoder_hidden_states[1]), self.afn44(encoder_hidden_states[3]), encoder_hidden_states[3]], dim=1)
             
+        if self.config.add_depth_channel:
+            for i, depth in enumerate(depths[1:]):
+                encoder_hidden_states[i] = torch.cat([encoder_hidden_states[i], depth], dim=1)
+
         if self.config.dam:
             encoder_hidden_states[0] = self.dam(encoder_hidden_states[0])
 
