@@ -22,6 +22,7 @@ from modules.dbn import DilationBasedNetwork
 from modules.afn import ContextAFN, SpatialAFN
 from modules.decoder import AfnDecoderBlock
 from modules.upsample import UpsampleBlock
+# torch.autograd.set_detect_anomaly(True)
 
 # AbG layers
 # SersegformerLayer -> SersegformerMixFFN
@@ -97,7 +98,7 @@ class SersegformerOverlapPatchEmbeddings(nn.Module):
         x = x.flatten(2).transpose(1, 2)
         x = self.layer_norm(x)
         if self.abg:
-            x += x*F.sigmoid(x)
+            x = x + x*F.sigmoid(x)
         return x, height, width
 
 
@@ -149,7 +150,7 @@ class SersegformerEfficientSelfAttention(nn.Module):
             hidden_states = hidden_states.reshape(batch_size, num_channels, -1).permute(0, 2, 1)
             hidden_states = self.layer_norm(hidden_states)
             if self.abg:
-                hidden_states += hidden_states*F.sigmoid(hidden_states)
+                hidden_states = hidden_states + hidden_states*F.sigmoid(hidden_states)
 
         key_layer = self.transpose_for_scores(self.key(hidden_states))
         value_layer = self.transpose_for_scores(self.value(hidden_states))
@@ -259,7 +260,7 @@ class SersegformerMixFFN(nn.Module):
             hidden_states_add = F.sigmoid(hidden_states)*hidden_states
         hidden_states = self.intermediate_act_fn(hidden_states)
         if self.abg:
-            hidden_states += hidden_states_add
+            hidden_states = hidden_states + hidden_states_add
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.dense2(hidden_states)
         hidden_states = self.dropout(hidden_states)
@@ -305,6 +306,12 @@ class SersegformerLayer(nn.Module):
 
         return outputs
 
+from typing import Optional, Tuple
+from dataclasses import dataclass
+
+@dataclass
+class SerSegEncoderOutput(BaseModelOutput):
+    depths: Optional[Tuple[torch.FloatTensor]] = None
 
 class SersegformerEncoder(nn.Module):
     def __init__(self, config):
@@ -317,14 +324,18 @@ class SersegformerEncoder(nn.Module):
         # patch embeddings
         embeddings = []
         for i in range(config.num_encoder_blocks):
+            n_channels = config.num_channels if i == 0 else config.hidden_sizes[i - 1]
+            if self.config.add_depth_channel:
+                n_channels += 1
+
             embeddings.append(
                 SersegformerOverlapPatchEmbeddings(
                     image_size=config.image_size // config.downsampling_rates[i],
                     patch_size=config.patch_sizes[i],
                     stride=config.strides[i],
-                    num_channels=config.num_channels if i == 0 else config.hidden_sizes[i - 1],
-                    hidden_size=config.hidden_sizes[i],
-                    abg=config.abg
+                    num_channels=n_channels, # in channels
+                    hidden_size=config.hidden_sizes[i], # out channels
+                    abg=self.config.abg
                 )
             )
         self.patch_embeddings = nn.ModuleList(embeddings)
@@ -361,6 +372,7 @@ class SersegformerEncoder(nn.Module):
     def forward(
         self,
         pixel_values,
+        depth=None,
         output_attentions=False,
         output_hidden_states=False,
         return_dict=True,
@@ -370,10 +382,20 @@ class SersegformerEncoder(nn.Module):
 
         batch_size = pixel_values.shape[0]
 
+        if self.config.add_depth_channel:
+            assert depth is not None
+            depths = [depth]
+            for sr in self.config.downsampling_rates[1:]:
+                depths.append(F.interpolate(depth, scale_factor=1/sr, mode='bilinear', align_corners=False))
+        else:
+            depths = [None for _ in self.config.downsampling_rates]
+
         hidden_states = pixel_values
-        for idx, x in enumerate(zip(self.patch_embeddings, self.block, self.layer_norm)):
-            embedding_layer, block_layer, norm_layer = x
+        for idx, x in enumerate(zip(self.patch_embeddings, self.block, self.layer_norm, depths)):
+            embedding_layer, block_layer, norm_layer, depth = x
             # first, obtain patch embeddings
+            if self.config.add_depth_channel:
+                hidden_states = torch.cat([hidden_states, depth], dim=1)
             hidden_states, height, width = embedding_layer(hidden_states)
             # second, send embeddings through blocks
             for i, blk in enumerate(block_layer):
@@ -395,10 +417,11 @@ class SersegformerEncoder(nn.Module):
 
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
-        return BaseModelOutput(
+        return SerSegEncoderOutput(
             last_hidden_state=hidden_states,
             hidden_states=all_hidden_states,
             attentions=all_self_attentions,
+            depths=tuple(depths)
         )
 
 
@@ -448,27 +471,7 @@ class SersegformerModel(SersegformerPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
 
-    def forward(self, pixel_values, output_attentions=None, output_hidden_states=None, return_dict=None):
-        r"""
-        Returns:
-
-        Examples::
-
-            >>> from transformers import SegformerFeatureExtractor, SegformerModel
-            >>> from PIL import Image
-            >>> import requests
-
-            >>> feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b0")
-            >>> model = SegformerModel("nvidia/segformer-b0")
-
-            >>> url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-            >>> image = Image.open(requests.get(url, stream=True).raw)
-
-            >>> inputs = feature_extractor(images=image, return_tensors="pt")
-            >>> outputs = model(**inputs)
-            >>> sequence_output = outputs.last_hidden_state
-        """
-
+    def forward(self, pixel_values, depth=None, output_attentions=None, output_hidden_states=None, return_dict=None):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -477,6 +480,7 @@ class SersegformerModel(SersegformerPreTrainedModel):
 
         encoder_outputs = self.encoder(
             pixel_values,
+            depth=depth,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
@@ -486,10 +490,11 @@ class SersegformerModel(SersegformerPreTrainedModel):
         if not return_dict:
             return (sequence_output,) + encoder_outputs[1:]
 
-        return BaseModelOutput(
+        return SerSegEncoderOutput(
             last_hidden_state=sequence_output,
             hidden_states=encoder_outputs.hidden_states,
             attentions=encoder_outputs.attentions,
+            depths=encoder_outputs.depths
         )
 
 
@@ -635,7 +640,7 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
                                                UpsampleBlock(config.decoder_hidden_size//4, config.decoder_hidden_size//4, stride=4))
 
 
-    def forward(self, encoder_hidden_states):
+    def forward(self, encoder_hidden_states, depths=None):
         batch_size, _, _, _ = encoder_hidden_states[-1].shape
         all_hidden_states = ()
         encoder_hidden_states = list(encoder_hidden_states)
@@ -676,7 +681,7 @@ class SersegformerDecodeHead(SersegformerPreTrainedModel):
         if self.config.upsample: # Upsample by 4
             hidden_states = self.upsample1(hidden_states)
             if self.config.afn:
-                hidden_states += self.afn_final(hidden_states)
+                hidden_states = hidden_states + self.afn_final(hidden_states)
             hidden_states = self.upsample2(hidden_states)
 
         # logits are of shape (batch_size, num_labels, height/4, width/4)
@@ -700,6 +705,7 @@ class SersegformerForSemanticSegmentation(SersegformerPreTrainedModel):
     def forward(
         self,
         pixel_values,
+        depth=None,
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -712,14 +718,16 @@ class SersegformerForSemanticSegmentation(SersegformerPreTrainedModel):
 
         outputs = self.sersegformer(
             pixel_values,
+            depth=depth,
             output_attentions=output_attentions,
             output_hidden_states=True,  # we need the intermediate hidden states
             return_dict=return_dict,
         )
         
         encoder_hidden_states = outputs.hidden_states if return_dict else outputs[1]
+        depths = outputs.depths
 
-        logits = self.decode_head(encoder_hidden_states)
+        logits = self.decode_head(encoder_hidden_states, depths)
         return logits
 
         # loss = None
@@ -752,27 +760,31 @@ class SersegformerForSemanticSegmentation(SersegformerPreTrainedModel):
 if __name__ == '__main__':
     import time
 
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    device = torch.device('cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cpu')
     config = SersegformerConfig(abg=True,
                                 num_labels=1,
                                 # decoder_hidden_size=128, # Channels compression (-4ms)
                                 upsample=True,
-                                afn=True,
+                                afn=False,
+                                add_depth_channel=True,
                                 dbn=True # Cheap, no inference time increase
                                 )
     model = SersegformerForSemanticSegmentation(config).to(device)
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'Number of parameters: {n_params}')
     dummy_input = torch.randn((1,3,512,512)).to(device)
+    dummy_depth = torch.randn((1,1,512,512)).to(device)
+    print(model(dummy_input, dummy_depth).shape)
+
     model.eval()
     for _ in range(10):
-        model(dummy_input)
+        model(dummy_input, dummy_depth)
     n_eval_iters = 100
     
     start_ts = time.time()
     with torch.no_grad():
         for _ in range(n_eval_iters):
-            output = model(dummy_input)
+            output = model(dummy_input, dummy_depth)
     print(output.shape)
     print(f'Inference_time (ms): {1000*(time.time()-start_ts)/n_eval_iters}\nDevice: {str(device)}')

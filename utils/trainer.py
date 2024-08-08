@@ -1,7 +1,7 @@
 from transformers import Trainer
 from adan_pytorch import Adan
 import sys; sys.path.append('../')
-from utils.losses import dice_loss_binary as dice_loss
+from utils.losses import dice_loss_binary as dice_loss, crf_loss
 from utils.metrics import iou as compute_iou
 import torch.nn.functional as F
 import torch
@@ -9,10 +9,11 @@ import numpy as np
 
 
 class SemanticSegmentationTrainer(Trainer):
-    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, label_names=['person'], params=None, *args, **kwargs):
+    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, crf_fraction=0., label_names=['person'], params=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dice_fraction = dice_fraction
         self.ce_fraction = ce_fraction
+        self.crf_fraction = crf_fraction
         self.label_names = label_names
         self.params = params
 
@@ -24,7 +25,11 @@ class SemanticSegmentationTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         image = inputs["image"]
         mask = inputs["mask"]
-        outputs = model(image)
+        if 'depth' in inputs:
+            depth = inputs['depth']
+            outputs = model(image, depth)
+        else:
+            outputs = model(image)
         if mask.shape[-2:] != outputs.shape[-2:]:
             outputs = F.interpolate(outputs, size=mask.shape[-2:], mode="bilinear", align_corners=False)
         mask = mask.contiguous().view(-1).float()
@@ -32,6 +37,9 @@ class SemanticSegmentationTrainer(Trainer):
         ce_loss = F.binary_cross_entropy_with_logits(logits, mask)
         dice_loss_ = dice_loss(logits, mask)
         loss = self.ce_fraction*ce_loss+self.dice_fraction*dice_loss_
+        if self.crf_fraction > 0:
+            loss += crf_loss(logits)*self.crf_fraction # smoothes the output logits using crf
+        
         return (loss, outputs) if return_outputs else loss
 
     def create_optimizer(self):
@@ -58,7 +66,10 @@ class SemanticSegmentationTrainer(Trainer):
             
             # Forward pass
             with torch.no_grad():
-                logits = self.model(inputs['image'])
+                if 'depth' not in inputs:
+                    logits = self.model(inputs['image'])
+                else:
+                    logits = self.model(inputs['image'], inputs['depth'])
                 
             mask = inputs['mask']
             if mask.shape[-2:] != logits.shape[-2:]:

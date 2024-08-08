@@ -101,7 +101,7 @@ class EasyPortraitDataset(Dataset):
         image, mask, depth = sample['image'], sample['mask'], sample.get('depth')
         sample = {'image': image, 'mask': mask.long()}
         if add_depth:
-            sample['depth'] = depth/1000
+            sample['depth'] = depth.unsqueeze(0)/1000
         return sample
 
 
@@ -111,7 +111,7 @@ class SegmentationDataCollator(DefaultDataCollator):
         pixel_values = torch.stack([f['image'] for f in features])
         labels = torch.stack([f['mask'] for f in features])
         batch_dict = {'image': pixel_values, 'mask': labels}
-        if 'depth' in features:
+        if 'depth' in features[0]:
             batch_dict['depth'] = torch.stack([f['depth'] for f in features])
         return batch_dict
     
@@ -123,4 +123,6 @@ if __name__ == '__main__':
                                   get_val_test_augmentation(),
                                   binary=True,
                                   depth=True)
-    print(dataset[0])
+    sample = dataset[0]
+    print(sample['image'].shape)
+    print(sample['depth'].shape)

@@ -31,6 +31,7 @@ class SersegformerConfig(PretrainedConfig):
         dbn=False, # Dilation-based convolition network from https://arxiv.org/pdf/2401.15741
         afn=False, # Attention-fusion Networks
         critic=False, # Add critic loss
+        add_depth_channel=False, # Add depth map channel
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -60,3 +61,4 @@ class SersegformerConfig(PretrainedConfig):
         self.critic = critic
         self.upsample = upsample
         self.afn = afn
+        self.add_depth_channel = add_depth_channel

@@ -1,5 +1,5 @@
 import sys; sys.path.append('../'); sys.path.append('../modules/'); sys.path.append('../models/')
-from models.SERNet_Former import SERNet_Former
+from models.SERSegFormer.model import SERNet_Former
 import torch
 import torch.onnx
 from onnx import ModelProto
