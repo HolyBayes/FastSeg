@@ -12,12 +12,13 @@ import cv2
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
     
 
+def build_pipeline(ckpt_path):
+    return SemanticSegmentationPipeline(SERNet_Former.from_pretrained(ckpt_path))
 
 if __name__ == '__main__':
     CKPT_PATH = '../../checkpoints/sernet/'
-    model = SERNet_Former.from_pretrained(CKPT_PATH)
     # Create the pipeline
-    segmentation_pipeline = SemanticSegmentationPipeline(model)
+    segmentation_pipeline = build_pipeline(CKPT_PATH)
 
     # Test the pipeline
     image = Image.open(os.path.join(CURRENT_DIR, "../../data/easyportrait/images/val/3cd3dd36-66f6-4a9e-af14-7112034dfcd1.jpg"))

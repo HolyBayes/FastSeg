@@ -1,4 +1,4 @@
-import sys; sys.path.append('../'); sys.path.append('../modules/')
+import sys; sys.path.append('../../'); sys.path.append('../modules/')
 
 from models.SERNet_Former.encoder import EfficientResNetEncoder
 from models.SERNet_Former.decoder import EfficientResNetDecoder
@@ -37,6 +37,9 @@ if __name__ == '__main__':
     print(f'Device: {device}')
     config = SERNetConfig(num_labels=2)
     model = SERNet_Former(config).to(device)
+    n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f'Number of parameters: {n_params}')
+    
     input = torch.randn((1,3,1024,768)).to(device)
     output = model(input)
     assert output.shape == (1,2,1024,768)

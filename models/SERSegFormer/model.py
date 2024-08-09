@@ -782,7 +782,7 @@ if __name__ == '__main__':
                                 # decoder_hidden_size=128, # Channels compression (-4ms)
                                 upsample=True,
                                 afn=False,
-                                add_depth_channel=True,
+                                add_depth_channel=False,
                                 dbn=True, # Cheap, no inference time increase,
                                 dam=True
                                 )

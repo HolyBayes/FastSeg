@@ -5,4 +5,5 @@ results/
 checkpoints/
 wandb/
 data/easyportrait/
+pred.png
 .ipynb_checkpoints/

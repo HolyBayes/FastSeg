@@ -15,8 +15,9 @@ from utils.trainer import SemanticSegmentationTrainer
 if __name__ == '__main__':
 
     # Initialize model configuration and model
-    config = SERNetConfig(num_labels=1)
-    model = SERNet_Former(config)
+    # config = SERNetConfig(num_labels=1)
+    # model = SERNet_Former(config)
+    model = SERNet_Former.from_pretrained('../checkpoints/sernet/')
     model.apply(init_weights)
 
     # Load dataset
@@ -34,9 +35,11 @@ if __name__ == '__main__':
         binary=True
     )
 
+    # exp_name = model.__class__.__name__
+    exp_name = 'sernet'
     # Initialize TrainingArguments
     training_args = TrainingArguments(
-        output_dir=f'../results/{model.__class__.__name__}',
+        output_dir=f'../results/{exp_name}',
         num_train_epochs=100,
         per_device_train_batch_size=6,
         per_device_eval_batch_size=6,
@@ -44,7 +47,7 @@ if __name__ == '__main__':
         save_steps=500,
         eval_steps=500,
         report_to="none",
-        logging_dir=f'../logs/{model.__class__.__name__}',
+        logging_dir=f'../logs/{exp_name}',
         logging_steps=100,
         load_best_model_at_end=True,
         metric_for_best_model="eval_iou",

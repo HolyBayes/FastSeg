@@ -11,10 +11,13 @@ import os
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def build_pipeline(ckpt_path):
+    return SemanticSegmentationPipeline(SegformerForSemanticSegmentation.from_pretrained(ckpt_path))
+
 if __name__ == '__main__':
     # Create the pipeline
     ckpt_path = os.path.join(CURRENT_DIR, '../../checkpoints/segformer-b0/')
-    segmentation_pipeline = SemanticSegmentationPipeline(SegformerForSemanticSegmentation.from_pretrained(ckpt_path))
+    segmentation_pipeline = build_pipeline(ckpt_path)
 
     # Test the pipeline
     image = Image.open(os.path.join(CURRENT_DIR, "../../data/easyportrait/images/val/3cd3dd36-66f6-4a9e-af14-7112034dfcd1.jpg"))

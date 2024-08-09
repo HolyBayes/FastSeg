@@ -10,13 +10,17 @@ from utils.pipeline import SemanticSegmentationPipeline
 import os
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def build_pipeline(ckpt_path):
+    config = SersegformerConfig.from_pretrained(ckpt_path)
+    model = SersegformerForSemanticSegmentation.from_pretrained(ckpt_path)
+    return SemanticSegmentationPipeline(model,depth=config.add_depth_channel) 
 
 if __name__ == '__main__':
     # Create the pipeline
     ckpt_path = os.path.join(CURRENT_DIR, '../../checkpoints/serseg_abg_dbn_w_depth/')
     ckpt_path = os.path.join(CURRENT_DIR, '../../results/SersegformerForSemanticSegmentation_decoder/checkpoint-2000/')
-    model = SersegformerForSemanticSegmentation.from_pretrained(ckpt_path)
-    segmentation_pipeline = SemanticSegmentationPipeline(model)
+    
+    segmentation_pipeline = build_pipeline(ckpt_path)
 
     # Test the pipeline
     image = Image.open(os.path.join(CURRENT_DIR, "../../data/easyportrait/images/val/3cd3dd36-66f6-4a9e-af14-7112034dfcd1.jpg"))
@@ -27,11 +31,7 @@ if __name__ == '__main__':
 
 
     # With depth
-
-
-    ckpt_path = os.path.join(CURRENT_DIR, '../../checkpoints/serseg_abg_dbn_w_depth/')
-    model = SersegformerForSemanticSegmentation.from_pretrained(ckpt_path)
-    segmentation_pipeline = SemanticSegmentationPipeline(model, depth=True)
+    segmentation_pipeline = build_pipeline(ckpt_path)
 
     # Test the pipeline
     
