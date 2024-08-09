@@ -120,7 +120,8 @@ IMPORTANT NOTE: the inference time can be easily reduced by ~2 times by moving f
 | SegFormer-B0 | 13 | 98.0 | 3.7 | 14 |
 | SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training time) | ~4.5 | 15 |
 | SERSegFormer w DConv decoder | ~24 | 98.0+ (still training) | 3.9 | 15 |
-| SERSegFormer w DConv decoder, AbG, DBN, DAM | ~28 | ? | 4.1 | 15 |
+| SERSegFormer w DConv decoder, AbG, DBN, DAM | ~28 | ? | 4.2 | 15 |
+| SERSegFormer w DConv decoder, AbG, DBN, DAM, and Depth channel | ~28 | ? | 4.2 | 15 |
 
 ![](assets/res.jpeg)
 
