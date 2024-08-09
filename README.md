@@ -108,11 +108,13 @@ _Note: Some extra dependencies may be included to the requirements.txt, which is
 - [x]  According to the authors discussion, the decoder part of SERNet-Former can also still be modified with AfNs.
 
 # Numerical results
-| Model | Inference time (ms) on 1080Ti (on raw PyTorch with no TensorRT and ONNX) | IoU x 100 | N_params (M) |
-| --- | --- | --- | --- |
-| SERNet-Former (EfficientNet) | 33 | 97.5 |  |
-| SegFormer-B0 | 13 | 98.0 | 3.7 |
-| SERSeg | ? (Needs way more training) | 4 |
-|  |  |  |  |
+All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT and ONNX speedup)
+
+| Model | Inference time (ms)  | IoU | N_params (M) | Model size (Mb) |
+| --- | --- | --- | --- | --- |
+| SERNet-Former (EfficientNet) | 33 | 97.5 | 9.2 | 35 |
+| SegFormer-B0 | 13 | 98.0 | 3.7 | 14 |
+| SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | ~4.5 | 15 |
+| SegFormer-B0 w DConv decoder | ~31 | 98.0+ (still training) | 4.2 | 15 |
 
 # Conclusion
