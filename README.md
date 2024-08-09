@@ -113,7 +113,7 @@ All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT 
 
 | Model | Inference time (ms)  | IoU | N_params (M) | Model size (Mb) |
 | --- | --- | --- | --- | --- |
-| SERNet-Former (EfficientNet) | 33 | 97.5 | 9.2 | 35 |
+| SERNet-Former (EfficientNet) | 33 | 97.5 (Needs more training, I believe in that shit) | 9.2 | 35 |
 | SegFormer-B0 | 13 | 98.0 | 3.7 | 14 |
 | SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | ~4.5 | 15 |
 | SegFormer-B0 w DConv decoder | ~31 | 98.0+ (still training) | 4.2 | 15 |
