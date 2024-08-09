@@ -112,12 +112,15 @@ _Note: Some extra dependencies may be included to the requirements.txt, which is
 # Results
 All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT and ONNX speedup) on 512x512 RBG images
 
+IMPORTANT NOTE: the inference time can be easily reduced by ~2 times by moving from dynamic PyTorch Graphs to the static TensorRT ones. Unfortunately, my old 1080Ti became not compatible with latest TensorRT, so this research section left out of scope.
+
 | Model | Inference time (ms)  | IoU | N_params (M) | Model size (Mb) |
 | --- | --- | --- | --- | --- |
 | SERNet-Former (EfficientNet) | 33 | 97.5 (Needs more training, I believe in that shit) | 9.2 | 35 |
 | SegFormer-B0 | 13 | 98.0 | 3.7 | 14 |
-| SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | ~4.5 | 15 |
-| SERSegFormer-B0 w DConv decoder | ~31 | 98.0+ (still training) | 4.2 | 15 |
+| SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training time) | ~4.5 | 15 |
+| SERSegFormer w DConv decoder | ~24 | 98.0+ (still training) | 3.9 | 15 |
+| SERSegFormer w DConv decoder, AbG, DBN, DAM | ~28 | ? | 4.1 | 15 |
 
 ![](assets/res.jpeg)
 
