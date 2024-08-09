@@ -7,6 +7,7 @@ from data.dataset import *
 from data.transforms import get_training_augmentation, get_val_test_augmentation
 
 from utils.trainer import SemanticSegmentationTrainer
+from safetensors.torch import load_file
 
 
 
@@ -16,9 +17,12 @@ if __name__ == '__main__':
     config = SegformerConfig(num_labels=1, image_size=512)
     # Initialize model configuration and model
     model = SegformerForSemanticSegmentation(config) # 12 ms inference time
-    state_dict = torch.load('../checkpoints/segformer_b0_cityscapes.pth')
-    state_dict.pop('decode_head.classifier.weight'); state_dict.pop('decode_head.classifier.bias')
-    model.load_state_dict(state_dict, strict=False)
+    # state_dict = torch.load('../checkpoints/segformer_b0_cityscapes.pth')
+    # state_dict.pop('decode_head.classifier.weight'); state_dict.pop('decode_head.classifier.bias')
+    # model.load_state_dict(state_dict, strict=False)
+    state_dict = load_file('../checkpoints/segformer-b0/model.safetensors')
+    model.load_state_dict(state_dict)
+
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'Number of parameters: {n_params}')
@@ -73,5 +77,6 @@ if __name__ == '__main__':
 
     # Start training
     # trainer.train()
-    trainer.train(resume_from_checkpoint=True)
+    # trainer.evaluate(print_metrics=True)
+    # trainer.train(resume_from_checkpoint=True)
     

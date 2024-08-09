@@ -6,16 +6,18 @@ from utils.metrics import iou as compute_iou
 import torch.nn.functional as F
 import torch
 import numpy as np
+from typing import Optional
 
 
 class SemanticSegmentationTrainer(Trainer):
-    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, crf_fraction=0., label_names=['person'], params=None, *args, **kwargs):
+    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, crf_fraction=0., label_names=['person'], params=None, lr=1e-3, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dice_fraction = dice_fraction
         self.ce_fraction = ce_fraction
         self.crf_fraction = crf_fraction
         self.label_names = label_names
         self.params = params
+        self.lr = lr
 
         # self.add_callback(EarlyStoppingCallback(early_stopping_patience=3))
         # self.add_callback(TensorBoardCallback())
@@ -48,11 +50,11 @@ class SemanticSegmentationTrainer(Trainer):
         else:
             params = self.params
         if self.optimizer is None:
-            self.optimizer = Adan(params, lr=1e-3, weight_decay = 0.02)
+            self.optimizer = Adan(params, lr=self.lr, weight_decay = 0.02)
         return self.optimizer
     
 
-    def evaluate(self, eval_dataset=None, ignore_keys=False, metric_key_prefix: str = "eval", n_iters: int | None = 100):
+    def evaluate(self, eval_dataset=None, ignore_keys=False, metric_key_prefix: str = "eval", n_iters: Optional[int] = 100, print_metrics=False):
         eval_dataloader = self.get_eval_dataloader(eval_dataset)
         self.model.eval()
         # Initialize containers to hold logits and labels
@@ -86,6 +88,8 @@ class SemanticSegmentationTrainer(Trainer):
         # Log metrics
         metrics = {f"{metric_key_prefix}_iou": iou}
         self.log(metrics)
+        if print_metrics:
+            print(metrics)
         self.model.train()
 
         return metrics

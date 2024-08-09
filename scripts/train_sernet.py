@@ -1,6 +1,6 @@
 from transformers import TrainingArguments
 import sys; sys.path.append('../')
-from models.SERSegFormer.model import SERNet_Former, SERNetConfig
+from models.SERNet_Former.model import SERNet_Former, SERNetConfig
 from transformers import TrainingArguments
 
 from data.dataset import *

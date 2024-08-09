@@ -17,6 +17,7 @@ if __name__ == '__main__':
     config = SersegformerConfig(num_labels=1,
                           image_size=512,
                           abg=False,
+                          dbn=False,
                           # decoder_hidden_size=128, # Channels compression
                           upsample=True)
     # Initialize model configuration and model
@@ -48,17 +49,19 @@ if __name__ == '__main__':
         binary=True
     )
 
+    exp_name = f"{model.__class__.__name__}_decoder"
+
     # Initialize TrainingArguments
     training_args = TrainingArguments(
-        output_dir=f'../results/{model.__class__.__name__}',
+        output_dir=f'../results/{exp_name}',
         num_train_epochs=100,
-        per_device_train_batch_size=6,
-        per_device_eval_batch_size=6,
+        per_device_train_batch_size=10,
+        per_device_eval_batch_size=10,
         evaluation_strategy="steps",
         save_steps=500,
         eval_steps=500,
-        # report_to="none", # Uncomment to diable WandB and Comet
-        logging_dir=f'../logs/{model.__class__.__name__}',
+        report_to="none", # Uncomment to diable WandB and Comet
+        logging_dir=f'../logs/{exp_name}',
         logging_steps=100,
         load_best_model_at_end=True,
         metric_for_best_model="eval_iou",  # Use mIoU for selecting the best model
@@ -72,7 +75,8 @@ if __name__ == '__main__':
     # Initialize custom trainer with callbacks and custom metric
     trainer = SemanticSegmentationTrainer(
         model=model,
-        params=chain(model.decode_head.upsample.parameters(),model.decode_head.classifier.parameters()),
+        params=chain(model.decode_head.upsample1.parameters(),model.decode_head.upsample2.parameters(),model.decode_head.classifier.parameters()),
+        lr=1e-3,
         label_names=['person'],
         args=training_args,
         train_dataset=train_dataset,

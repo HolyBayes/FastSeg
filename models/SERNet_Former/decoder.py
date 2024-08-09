@@ -4,7 +4,7 @@ from typing import Literal, List, Optional
 import sys; sys.path.append('../')
 from modules.afn import ContextAFN, SpatialAFN
 from enum import Enum
-from modules.encoder import EfficientResNetEncoder
+from models.SERNet_Former.encoder import EfficientResNetEncoder
 from modules.upsample import UpsampleBlock
 
 
