@@ -112,12 +112,7 @@ _Note: Some extra dependencies may be included to the requirements.txt, which is
 | --- | --- | --- | --- |
 | SERNet-Former (EfficientNet) | 33 | 97.5 |  |
 | SegFormer-B0 | 13 | 98.0 | 3.7 |
-| SERSeg:
-SegFormer-B0 backbone
-+ SERNet-Former features:
-DBN(Dilation boosted network)
-AbG(Attention-Boosting Gates)
-+ Depth channel | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | 4 |
+| SERSeg | ? (Needs way more training) | 4 |
 |  |  |  |  |
 
 # Conclusion
