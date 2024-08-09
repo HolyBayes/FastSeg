@@ -53,6 +53,7 @@
 │ └── <checkpoint_files>
 │
 │
+├── Visualization.ipynb # Data visualization notebook for inner purposes (nothing interesting)
 ├── requirements.txt
 └── README.md
 ```
@@ -108,18 +109,21 @@ _Note: Some extra dependencies may be included to the requirements.txt, which is
 - [x]  Additional methods that are not applied during the SERNet-Former experiments, such as multiscale (MS) crop sizes of images as well as additional coarse datasets that most literature applies, can also improve the results of our network.Add cross-attention to SERNet AfN’s AbGs with encoder feature maps (perform the skip-connection BEFORE AfN)
 - [x]  According to the authors discussion, the decoder part of SERNet-Former can also still be modified with AfNs.
 
-# Numerical results
-All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT and ONNX speedup)
+# Results
+All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT and ONNX speedup) on 512x512 RBG images
 
 | Model | Inference time (ms)  | IoU | N_params (M) | Model size (Mb) |
 | --- | --- | --- | --- | --- |
 | SERNet-Former (EfficientNet) | 33 | 97.5 (Needs more training, I believe in that shit) | 9.2 | 35 |
 | SegFormer-B0 | 13 | 98.0 | 3.7 | 14 |
 | SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | ~4.5 | 15 |
-| SegFormer-B0 w DConv decoder | ~31 | 98.0+ (still training) | 4.2 | 15 |
+| SERSegFormer-B0 w DConv decoder | ~31 | 98.0+ (still training) | 4.2 | 15 |
+
+![](assets/res.jpeg)
 
 # Checkpoints
-
+[SegFormer-B0](https://drive.google.com/file/d/1s3ZUBs3oNUtyz77IZSe4tU4WqBcJhWy-/view?usp=sharing)
+[SERSegFormer-B0 w DConv decoder](https://drive.google.com/file/d/1a2SyxMu5enDrZbfzYfRiB5L0YSTqP7ps/view?usp=sharing)
 
 # Conclusion
 Almost all the planned tasks were implemented, but since most of the planned experiments require training the model from scratch (with no transfer learning), there is a lack of expected results.
@@ -127,3 +131,5 @@ Almost all the planned tasks were implemented, but since most of the planned exp
 However, the repository itself provides a solid ground for vast further experiments, and provides usefull building blocks to apply the best attention practices in real time.
 
 An ultra-lighweight version of the SegFormer-B0 is another key contribution of the repository. It is a fine-tuned version of the official CityScapes SegFormer-B0 model, and provised IoU 98.0 at 13ms (with ONNX+TensorRT, it can take even 6ms) and takes 14Mb. Really impressive!. It is a great baseline candidate for further experiments.
+
+Also, based on the visual results, the dataset itself requires some cleaning. I am sure the current data quality interferers the models to reveal their potential completely.
