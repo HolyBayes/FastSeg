@@ -123,6 +123,7 @@ All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT 
 
 # Checkpoints
 [SegFormer-B0](https://drive.google.com/file/d/1s3ZUBs3oNUtyz77IZSe4tU4WqBcJhWy-/view?usp=sharing)
+
 [SERSegFormer-B0 w DConv decoder](https://drive.google.com/file/d/1a2SyxMu5enDrZbfzYfRiB5L0YSTqP7ps/view?usp=sharing)
 
 # Conclusion
