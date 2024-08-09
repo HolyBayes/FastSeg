@@ -1,6 +1,61 @@
 # Repository for fast person vs. background sem segmentation networks
 
-# Structure
+# Repo structure
+
+```
+│
+├── models/
+│ └── SERSegFormer/
+│ │ ├── config.py
+│ │ ├── infer.py
+│ │ └── model.py
+│ ├── SERNet_Former/
+│ │ ├── decoder.py
+│ │ ├── encoder.py
+│ │ ├── infer.py
+│ │ └── model.py
+│ └── SegFormer/
+│ │ ├── config.py
+│ │ ├── infer.py
+│ │ └── model.py
+│
+├── modules/
+│ ├── abg.py # Attention boosting Gate (from SERNet-Former)
+│ ├── afn.py # Attention fusion Network (from SERNet-Former)
+│ ├── dbn.py # Dilation based Network (from SERNet-Former)
+│ ├── dam.py # Dual Attention Mechanism (from HSNet)
+│ └── upsample.py # Nothing interesting here, just upsampling block of bilinear interpolation + Conv2d 
+│
+├── scripts/
+│ ├── deploy.py # PyTorch -> ONNX -> TensorRT
+│ ├── train_segformer.py # script for vanilla Segformer-B0 training
+│ ├── train_sernet.py # script for vanilla SERNet training
+│ ├── train_serseg.py # SERSeg
+│ ├── train_serseg_decoder.py # Segformer-B0 with convolutional decoder
+│ └── train_serseg_w_depth.py # Segformer-B0 with AbG, DBN, and Depth Map
+│
+├── utils/
+│ ├── losses.py
+│ ├── initialization.py
+│ ├── metrics.py
+│ ├── trainer.py
+│ ├── visualization.py
+│ └── pipeline.py # Basic Segmentation pipeline class
+│
+├── data/
+│ ├── easyportrait/(.gitignored)
+│ │ └── images/
+│ │ └── annotations/
+│ ├── transforms.py
+│ └── dataset.py
+│
+├── checkpoints/ (.gitignored)
+│ └── <checkpoint_files>
+│
+│
+├── requirements.txt
+└── README.md
+```
 
 # Inference
 
@@ -9,9 +64,16 @@
 ## Models
 - [x]  [SERNet-Former](https://arxiv.org/abs/2401.15741)
 - [x]  [SegFormer](https://arxiv.org/abs/2105.15203)
-- [x]  some additional modules like Dual Attention Mechanism from [HSNet](https://ieeexplore.ieee.org/document/10495017)
+- [x] SERSeg-Former (my model, which is a soup of latest sem seg and attention best practices on top of SegFormer-B0 backbone)  
+- [x]  some additional modules like Dual Attention Mechanism from [HSNet](https://ieeexplore.ieee.org/document/10495017) as a bonus
 
 ## Modules
+
+- [x] Attention-Boosting Gate (AbG, [https://arxiv.org/abs/2401.15741](https://arxiv.org/abs/2401.15741)) 
+- [x] Attention fusion Network (AfN, [https://arxiv.org/abs/2401.15741](https://arxiv.org/abs/2401.15741))
+- [x] Dual Attention Mechanism (DAM, [https://arxiv.org/abs/2401.15741](https://arxiv.org/abs/2401.15741))
+- [x] Dilation Based Network (DbN, [https://ieeexplore.ieee.org/document/10495017
+](https://ieeexplore.ieee.org/document/10495017)
 
 ## Features
 - [x] CRF loss
@@ -21,8 +83,6 @@
 _
 Note: all the features and modules are optional. It means you can manually enable or disable them in your personal configureation_
 
-## Modules
-
 # Installation
 
 ```
@@ -30,8 +90,7 @@ pip install -r requirements.txt
 ```
 _Note: Some extra dependencies may be included to the requirements.txt, which is a dummy snapshot of my working environment_
 
-# Experiments
-
+# Conducted experiments and TODOs
 
 ## SegFormer
 - [x]  Replace Segformer's upsampling interpolation with convolutional Upsampling block
@@ -48,6 +107,17 @@ _Note: Some extra dependencies may be included to the requirements.txt, which is
 - [x]  Additional methods that are not applied during the SERNet-Former experiments, such as multiscale (MS) crop sizes of images as well as additional coarse datasets that most literature applies, can also improve the results of our network.Add cross-attention to SERNet AfN’s AbGs with encoder feature maps (perform the skip-connection BEFORE AfN)
 - [x]  According to the authors discussion, the decoder part of SERNet-Former can also still be modified with AfNs.
 
-# Results
+# Numerical results
+| Model | Inference time (ms) on 1080Ti (on raw PyTorch with no TensorRT and ONNX) | IoU x 100 | N_params (M) |
+| --- | --- | --- | --- |
+| SERNet-Former (EfficientNet) | 33 | 97.5 |  |
+| SegFormer-B0 | 13 | 98.0 | 3.7 |
+| SERSeg:
+SegFormer-B0 backbone
++ SERNet-Former features:
+DBN(Dilation boosted network)
+AbG(Attention-Boosting Gates)
++ Depth channel | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | 4 |
+|  |  |  |  |
 
-# Deployment
+# Conclusion
