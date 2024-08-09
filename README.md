@@ -93,6 +93,7 @@ _Note: Some extra dependencies may be included to the requirements.txt, which is
 # Conducted experiments and TODOs
 
 ## SegFormer
+- [x]  Number of SegFormer-B0 parameters is reduced from 15M to 3.7M without significant quality decrease
 - [x]  Replace Segformer's upsampling interpolation with convolutional Upsampling block
 
 ## SERNet
@@ -117,4 +118,12 @@ All experiments are conducted on single 1080Ti (on raw PyTorch with no TensorRT 
 | SERSeg | 16 + 12ms for Depth Prediction (MiDaS v2) | ? (Needs way more training) | ~4.5 | 15 |
 | SegFormer-B0 w DConv decoder | ~31 | 98.0+ (still training) | 4.2 | 15 |
 
+# Checkpoints
+
+
 # Conclusion
+Almost all the planned tasks were implemented, but since most of the planned experiments require training the model from scratch (with no transfer learning), there is a lack of expected results.
+
+However, the repository itself provides a solid ground for vast further experiments, and provides usefull building blocks to apply the best attention practices in real time.
+
+An ultra-lighweight version of the SegFormer-B0 is another key contribution of the repository. It is a fine-tuned version of the official CityScapes SegFormer-B0 model, and provised IoU 98.0 at 13ms (with ONNX+TensorRT, it can take even 6ms) and takes 14Mb. Really impressive!. It is a great baseline candidate for further experiments.
