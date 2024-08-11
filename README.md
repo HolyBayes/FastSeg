@@ -126,9 +126,9 @@ IMPORTANT NOTE: the inference time can be easily reduced by ~2 times by moving f
 ![](assets/res.jpeg)
 
 # Checkpoints
-[SegFormer-B0](https://drive.google.com/file/d/1s3ZUBs3oNUtyz77IZSe4tU4WqBcJhWy-/view?usp=sharing)
+* **SegFormer-B0** - [GDrive](https://drive.google.com/file/d/1s3ZUBs3oNUtyz77IZSe4tU4WqBcJhWy-/view?usp=sharing)
 
-[SERSegFormer-B0 w DConv decoder](https://drive.google.com/file/d/1a2SyxMu5enDrZbfzYfRiB5L0YSTqP7ps/view?usp=sharing)
+* **SERSegFormer-B0 w DConv decoder** - [GDrive](https://drive.google.com/file/d/1a2SyxMu5enDrZbfzYfRiB5L0YSTqP7ps/view?usp=sharing) [Huggingface](https://huggingface.co/Leensman/serseg_b0_easyportrait/tree/main)
 
 # Conclusion
 Almost all the planned tasks were implemented, but since most of the planned experiments require training the model from scratch (with no transfer learning), there is a lack of expected results.
