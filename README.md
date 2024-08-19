@@ -27,7 +27,7 @@
 │ └── upsample.py # Nothing interesting here, just upsampling block of bilinear interpolation + Conv2d 
 │
 ├── scripts/
-│ ├── deploy.py # PyTorch -> ONNX -> TensorRT
+│ ├── deploy.py # PyTorch -> ONNX -> CoreML
 │ ├── train_segformer.py # script for vanilla Segformer-B0 training
 │ ├── train_sernet.py # script for vanilla SERNet training
 │ ├── train_serseg.py # SERSeg

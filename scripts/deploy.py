@@ -1,96 +1,60 @@
-import sys; sys.path.append('../'); sys.path.append('../modules/'); sys.path.append('../models/')
-from models.SERSegFormer.model import SERNet_Former
-import torch
-import torch.onnx
-from onnx import ModelProto
-import tensorrt as trt
-import onnx
-import onnx_tensorrt.backend as backend
 import numpy as np
-import onnxruntime as ort
-import time
-from tqdm import trange
+np.bool = np.bool_
+np.int = np.int_
+import torch
+import sys; sys.path.append('../')
+from models.SERSegFormer.model import SersegformerForSemanticSegmentation
+import coremltools as ct
+from utils.pipeline import SegmentationDeploymentDecorator
 
 
-TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
-trt_runtime = trt.Runtime(TRT_LOGGER)
 
 
-if __name__ == '__main__':
-    model = SERNet_Former(n_classes=2)
-    model.eval()
+IMG_SIZE = 512
+TORCH_CKPT_DIR = '../checkpoints/serseg_w_decoder/'
+ONNX_PATH = "../checkpoints/serseg_w_decoder.onnx"
+COREML_PATH = '../checkpoints/serseg_w_decoder.mlpackage'
+TEST_IMG_PATH = '..//data/easyportrait/images/val/0a3f6908-e244-4636-8c7b-1b27d7cdadce.jpg'
+
+def main():
+    # Load the pre-trained PyTorch model
+    torch_model = SegmentationDeploymentDecorator(
+        SersegformerForSemanticSegmentation.from_pretrained(TORCH_CKPT_DIR)
+    )
+    # torch_model_input = torch.randn((1,3,IMG_SIZE,IMG_SIZE)) # Unnormalized RGB image [0,255], channel first
+
+    import cv2
+    img = cv2.imread(TEST_IMG_PATH)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
+    torch_model_input = torch.from_numpy(img).permute(2,0,1).unsqueeze(0)
 
     
     # PyTorch -> ONNX
+    onnx_model = torch.onnx.dynamo_export(torch_model, torch_model_input)
+    onnx_model.save(ONNX_PATH)
 
-    # Create a dummy input tensor
-    dummy_input = torch.randn(1, 3, 1024, 768)  # Adjust the shape as necessary
+    traced_model = torch.jit.trace(torch_model, torch_model_input)
 
-    onnx_path = "sernet.onnx"
-    # Export the model to ONNX format
-    torch.onnx.export(model, dummy_input, onnx_path, 
-                    export_params=True, 
-                    opset_version=11, 
-                    do_constant_folding=True, 
-                    input_names=['input'], 
-                    output_names=['output'], 
-                    dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}})
+    out = traced_model(torch_model_input)
+    
+    
+    # Convert prediction back to readable format
+    mask_pred = out[0][0].detach().cpu().numpy()
+    mask_pred = np.where(mask_pred > 0, np.ones_like(mask_pred), np.zeros_like(mask_pred))
+    mask_pred = 1-np.repeat(np.expand_dims(mask_pred, -1), 3, -1)
+    mask_pred = (255*mask_pred).astype('uint8')
 
-    onnx_model = onnx.load(onnx_path)
-    onnx.checker.check_model(onnx_model)
+    # from PIL import Image
+    # Image.fromarray(mask_pred).save('./example_pred.png')
 
-    # Print a human-readable representation of the graph
-    print(onnx.helper.printable_graph(onnx_model.graph))
-
-    # Example input data
-    input_data = np.random.rand(1, 3, 1024, 768).astype(np.float32)
-    # Create an inference session
-    # session = ort.InferenceSession(onnx_path)
-    session = ort.InferenceSession(onnx_path, providers=['CUDAExecutionProvider'])
-
-    # Get model input and output names
-    input_name = session.get_inputs()[0].name
-    output_name = session.get_outputs()[0].name
-
-    n_warmup_iters = 100
-    print('ONNX model warmup:')
-    for _ in range(n_warmup_iters):
-        result = session.run([output_name], {input_name: input_data})[0]
-    # Run the model (inference)
-    print('ONNX model performance evaluation:')
-    n_eval_iters = 100
-    start_ts = time.time()
-    for _ in range(n_eval_iters):
-        result = session.run([output_name], {input_name: input_data})[0]
-    print(f'Inference speed (ms): {1000*(time.time()-start_ts)/n_eval_iters:.4f}')
-
-    assert result.shape == (1,2,1024,768)
-
-
-    # # ONNX -> TensorRT
-
-    import mmcv
-    from mmcv.tensorrt import onnx2tensorrt
-
-    # Define the path for the TensorRT engine file
-    trt_file_path = "sernet_model.trt"
-
-    # Convert ONNX to TensorRT
-    onnx2tensorrt(
-        onnx_path,
-        trt_file_path,
-        input_shapes={'input': [1, 3, 1024, 768]},  # Adjust input shapes if necessary
-        max_workspace_size=1 << 30,  # 1 GB
-        fp16_mode=False  # Set to True if you want to use FP16 precision
+    # ONNX -> CoreML
+    coreml_model = ct.convert(
+        traced_model,
+        inputs=[ct.TensorType(shape=torch_model_input.shape)]
     )
+    coreml_model.save(COREML_PATH)
+    
 
-    # Met some hardware issues
-
-
-    # engine = backend.prepare(onnx_model, device='CUDA:0')
-    # input_data = np.random.random(size=(1, 3, 1024, 768)).astype(np.float32)
-    # output_data = engine.run(input_data)[0]
-    # print(output_data)
-    # print(output_data.shape)
-
-        
+if __name__ == "__main__":
+    main()

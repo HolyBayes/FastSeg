@@ -67,3 +67,27 @@ class SemanticSegmentationPipeline(object):
         image = image / 255.0
         image = (image - mean) / std
         return image
+    
+
+class SegmentationDeploymentDecorator(torch.nn.Module):
+    def __init__(self, model, normalize=True):
+        super(SegmentationDeploymentDecorator, self).__init__()
+        self.model = model
+        self.model.eval()
+        self.normalize = normalize
+        if normalize:
+            self.register_buffer('mean', torch.tensor([0.485, 0.456, 0.406]))
+            self.register_buffer('std', torch.tensor([0.229, 0.224, 0.225]))
+
+    def forward(self, image):
+        """
+        @param image: Tensor of [B,C,H,W] shape
+        """
+
+        if self.normalize:
+            image = image.float() / 255.0
+            # Normalize using broadcasting
+            image = (image - self.mean[None, :, None, None]) / self.std[None, :, None, None]
+
+        # Pass through the model
+        return self.model(image)

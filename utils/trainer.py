@@ -1,5 +1,4 @@
 from transformers import Trainer
-from adan_pytorch import Adan
 import sys; sys.path.append('../')
 from utils.losses import dice_loss_binary as dice_loss, crf_loss
 from utils.metrics import iou as compute_iou
@@ -10,14 +9,12 @@ from typing import Optional
 
 
 class SemanticSegmentationTrainer(Trainer):
-    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, crf_fraction=0., label_names=['person'], params=None, lr=1e-3, *args, **kwargs):
+    def __init__(self, dice_fraction=0.2, ce_fraction=0.8, crf_fraction=0., label_names=['person'], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dice_fraction = dice_fraction
         self.ce_fraction = ce_fraction
         self.crf_fraction = crf_fraction
         self.label_names = label_names
-        self.params = params
-        self.lr = lr
 
         # self.add_callback(EarlyStoppingCallback(early_stopping_patience=3))
         # self.add_callback(TensorBoardCallback())
@@ -44,14 +41,6 @@ class SemanticSegmentationTrainer(Trainer):
         
         return (loss, outputs) if return_outputs else loss
 
-    def create_optimizer(self):
-        if self.params is None:
-            params = self.model.parameters()
-        else:
-            params = self.params
-        if self.optimizer is None:
-            self.optimizer = Adan(params, lr=self.lr, weight_decay = 0.02)
-        return self.optimizer
     
 
     def evaluate(self, eval_dataset=None, ignore_keys=False, metric_key_prefix: str = "eval", n_iters: Optional[int] = 100, print_metrics=False):
