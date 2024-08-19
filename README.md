@@ -128,7 +128,7 @@ IMPORTANT NOTE: the inference time can be easily reduced by ~2 times by moving f
 # Checkpoints
 * **SegFormer-B0** - [GDrive](https://drive.google.com/file/d/1s3ZUBs3oNUtyz77IZSe4tU4WqBcJhWy-/view?usp=sharing)
 
-* **SERSegFormer-B0 w DConv decoder** - [GDrive](https://drive.google.com/file/d/1D1SnIW5krjDGlLuaulKpLZR9O6-y3ilS/view?usp=sharing) [Huggingface](https://huggingface.co/Leensman/serseg_b0_easyportrait/tree/main) [CoreML] (https://drive.google.com/file/d/1tAJIzs7-g7a8CvczjXLu5mEjfOWaW4xs/view?usp=sharing) [ONNX] (https://drive.google.com/file/d/1PMnF7dk2rFiBvIpjfxhikCM97aLjuFbS/view?usp=sharing)
+* **SERSegFormer-B0 w DConv decoder** - [GDrive](https://drive.google.com/file/d/1D1SnIW5krjDGlLuaulKpLZR9O6-y3ilS/view?usp=sharing) [Huggingface](https://huggingface.co/Leensman/serseg_b0_easyportrait/tree/main) [CoreML](https://drive.google.com/file/d/1tAJIzs7-g7a8CvczjXLu5mEjfOWaW4xs/view?usp=sharing) [ONNX](https://drive.google.com/file/d/1PMnF7dk2rFiBvIpjfxhikCM97aLjuFbS/view?usp=sharing)
 
 # Conclusion
 Almost all the planned tasks were implemented, but since most of the planned experiments require training the model from scratch (with no transfer learning), there is a lack of expected results.
